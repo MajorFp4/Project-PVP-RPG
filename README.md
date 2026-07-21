@@ -1,8 +1,8 @@
-# Example Mod
+# Project RPG PVP
 
-## Setup
+## Description
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+This is a AI made mod that adds mechanics to create a long battle royale where you collect resources, upgrade your weapons and build a base preparing for the final fight where just the best can win
 
 ## License
 
