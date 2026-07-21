@@ -2,9 +2,7 @@
 	"required": true,
 	"package": "com.save_bed.mixin",
 	"compatibilityLevel": "JAVA_17",
-	"mixins": [
-		"SaveBedMixin"
-	],
+	"mixins": [],
 	"injectors": {
 		"defaultRequire": 1
 	},

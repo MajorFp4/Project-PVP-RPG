@@ -2,9 +2,7 @@
 	"required": true,
 	"package": "com.save_bed.client.mixin",
 	"compatibilityLevel": "JAVA_17",
-	"client": [
-		"SaveBedClientMixin"
-	],
+	"client": [],
 	"injectors": {
 		"defaultRequire": 1
 	},
