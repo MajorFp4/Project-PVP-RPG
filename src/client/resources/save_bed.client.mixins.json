@@ -1,9 +1,9 @@
 {
 	"required": true,
-	"package": "com.example.client.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"package": "com.save_bed.client.mixin",
+	"compatibilityLevel": "JAVA_17",
 	"client": [
-		"ExampleClientMixin"
+		"SaveBedClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

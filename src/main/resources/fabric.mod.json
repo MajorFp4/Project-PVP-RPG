@@ -1,38 +1,39 @@
 {
 	"schemaVersion": 1,
-	"id": "modid",
+	"id": "save_bed",
 	"version": "${version}",
-	"name": "Example Mod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Save Bed",
+	"description": "A long time open world battle royale mod",
 	"authors": [
-		"Me!"
+		"MajorFp4",
+		"EbbaStoic"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/MajorFp4/Project-PVP-RPG/"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/modid/icon.png",
+	"icon": "assets/save_bed/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.example.ExampleMod"
+			"com.save_bed.SaveBed"
 		],
 		"client": [
-			"com.example.client.ExampleModClient"
+			"com.save_bed.client.SaveBedClient"
 		]
 	},
 	"mixins": [
-		"modid.mixins.json",
+		"save_bed.mixins.json",
 		{
-			"config": "modid.client.mixins.json",
+			"config": "save_bed.client.mixins.json",
 			"environment": "client"
 		}
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
-		"minecraft": "~26.1.2",
-		"java": ">=25",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
 		"fabric-api": "*"
 	}
 }

@@ -1,14 +1,14 @@
-package com.example;
+package com.save_bed;
 
 import net.fabricmc.api.ModInitializer;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.util.Identifier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ExampleMod implements ModInitializer {
-	public static final String MOD_ID = "modid";
+public class SaveBed implements ModInitializer {
+	public static final String MOD_ID = "save_bed";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.
@@ -25,6 +25,6 @@ public class ExampleMod implements ModInitializer {
 	}
 
 	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+		return new Identifier(MOD_ID, path);
 	}
 }
