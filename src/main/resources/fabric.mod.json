@@ -1,5 +1,6 @@
 {
 	"schemaVersion": 1,
+	"accessWidener": "save_bed.accesswidener",
 	"id": "save_bed",
 	"version": "${version}",
 	"name": "Save Bed",
