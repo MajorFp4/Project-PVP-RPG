@@ -14,7 +14,7 @@ import java.util.UUID;
 public class EnchantedBedBlockEntity extends BedBlockEntity {
     private UUID ownerUuid;
     private String ownerName;
-    private int baseLifes = 3;
+    private int baseLifes = 1;
 
     public EnchantedBedBlockEntity(BlockPos pos, BlockState state) {
         super(pos, state);
@@ -89,7 +89,7 @@ public class EnchantedBedBlockEntity extends BedBlockEntity {
         if (nbt.contains("BaseLifes")) {
             this.baseLifes = nbt.getInt("BaseLifes");
         } else {
-            this.baseLifes = 3;
+            this.baseLifes = 1;
         }
     }
 
