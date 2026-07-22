@@ -29,6 +29,10 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.Identifier;
 import java.util.UUID;
 
 public class BedLogic {
@@ -57,24 +61,21 @@ public class BedLogic {
                 if (player.getUuid().equals(bedBe.getOwnerUuid())) {
                     return false; // Prevent owner from breaking their own bed
                 } else {
-                    // Play raid breaking sounds
-                    world.playSound(null, pos, SoundEvents.ITEM_TOTEM_USE, SoundCategory.BLOCKS, 1.0f, 1.0f);
-                    world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_DESTROY, SoundCategory.BLOCKS, 1.0f, 1.0f);
-
-                    // Clear the active bed location on the owner player if online
-                    UUID ownerUuid = bedBe.getOwnerUuid();
-                    if (ownerUuid != null) {
-                        ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ownerUuid);
-                        if (owner != null) {
-                            PlayerBedTracker tracker = (PlayerBedTracker) owner;
-                            tracker.save_bed$setActiveBedPos(null);
-                            tracker.save_bed$setActiveBedWorld(null);
-                            owner.sendMessage(Text.literal("Your Enchanted Bed was destroyed!").formatted(Formatting.RED));
-                        }
+                    if (!world.isClient() && player instanceof ServerPlayerEntity) {
+                        processEnemyBreak(world, pos, (ServerPlayerEntity) player);
                     }
+                    return false; // Cancel default breaking
                 }
             }
             return true;
+        });
+
+        // Register server C2S packet receiver for bed pickup
+        ServerPlayNetworking.registerGlobalReceiver(new Identifier(SaveBed.MOD_ID, "take_bed"), (server, player, handler, buf, responseSender) -> {
+            BlockPos pos = buf.readBlockPos();
+            server.execute(() -> {
+                pickupBed(player, pos);
+            });
         });
     }
 
@@ -162,6 +163,111 @@ public class BedLogic {
             tracker.save_bed$setActiveBedWorld(null);
         } else {
             player.sendMessage(Text.literal("You respawned at your Enchanted Bed.").formatted(Formatting.GREEN));
+        }
+    }
+
+    public static void processEnemyBreak(World world, BlockPos pos, ServerPlayerEntity enemy) {
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof EnchantedBedBlockEntity) {
+            EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
+            int lifes = bedBe.getBaseLifes() - 1;
+            bedBe.setBaseLifes(lifes);
+
+            // Play the Totem/Anvil sounds at the bed's location
+            world.playSound(null, pos, SoundEvents.ITEM_TOTEM_USE, SoundCategory.BLOCKS, 1.0f, 1.0f);
+            world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_DESTROY, SoundCategory.BLOCKS, 1.0f, 1.0f);
+
+            if (lifes <= 0) {
+                // Destroy block completely (no item drop)
+                BlockState state = world.getBlockState(pos);
+                if (state.getBlock() instanceof EnchantedBedBlock) {
+                    BlockPos otherPos = pos.offset(BedBlock.getOppositePartDirection(state));
+
+                    // Clear the active bed location on the owner player if online
+                    UUID ownerUuid = bedBe.getOwnerUuid();
+                    if (ownerUuid != null) {
+                        ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ownerUuid);
+                        if (owner != null) {
+                            PlayerBedTracker tracker = (PlayerBedTracker) owner;
+                            tracker.save_bed$setActiveBedPos(null);
+                            tracker.save_bed$setActiveBedWorld(null);
+                            owner.sendMessage(Text.literal("Your Enchanted Bed was destroyed!").formatted(Formatting.RED));
+                        }
+                    }
+
+                    // Remove block entities to prevent item drops in onStateReplaced
+                    world.removeBlockEntity(pos);
+                    world.removeBlockEntity(otherPos);
+
+                    // Set both to air
+                    world.setBlockState(pos, net.minecraft.block.Blocks.AIR.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
+                    world.setBlockState(otherPos, net.minecraft.block.Blocks.AIR.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
+                }
+            } else {
+                // Synchronize block state/entity to all clients
+                BlockState state = world.getBlockState(pos);
+                world.updateListeners(pos, state, state, net.minecraft.block.Block.NOTIFY_ALL);
+
+                // Sync the other part of the bed too
+                if (state.getBlock() instanceof EnchantedBedBlock) {
+                    BlockPos otherPos = pos.offset(BedBlock.getOppositePartDirection(state));
+                    BlockEntity otherBe = world.getBlockEntity(otherPos);
+                    if (otherBe instanceof EnchantedBedBlockEntity) {
+                        EnchantedBedBlockEntity otherBedBe = (EnchantedBedBlockEntity) otherBe;
+                        otherBedBe.setBaseLifes(lifes);
+                        BlockState otherState = world.getBlockState(otherPos);
+                        world.updateListeners(otherPos, otherState, otherState, net.minecraft.block.Block.NOTIFY_ALL);
+                    }
+                }
+
+                // Notify the enemy breaking player of remaining lifes
+                enemy.sendMessage(Text.literal("Enchanted Bed has " + lifes + " lives remaining!").formatted(Formatting.GOLD));
+            }
+        }
+    }
+
+    public static void openTakeUI(ServerPlayerEntity player) {
+        PlayerBedTracker tracker = (PlayerBedTracker) player;
+        BlockPos pos = tracker.save_bed$getActiveBedPos();
+        if (pos != null) {
+            PacketByteBuf buf = PacketByteBufs.create();
+            buf.writeBlockPos(pos);
+            ServerPlayNetworking.send(player, new Identifier(SaveBed.MOD_ID, "open_take_ui"), buf);
+        }
+    }
+
+    public static void pickupBed(ServerPlayerEntity owner, BlockPos pos) {
+        World world = owner.getWorld();
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof EnchantedBedBlockEntity) {
+            EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
+            if (owner.getUuid().equals(bedBe.getOwnerUuid())) {
+                ItemStack stack = new ItemStack(SaveBed.ENCHANTED_BED);
+                NbtCompound nbt = stack.getOrCreateNbt();
+                nbt.putUuid("OwnerUUID", bedBe.getOwnerUuid());
+                nbt.putString("OwnerName", bedBe.getOwnerName());
+
+                BlockState state = world.getBlockState(pos);
+                if (state.getBlock() instanceof EnchantedBedBlock) {
+                    BlockPos otherPos = pos.offset(BedBlock.getOppositePartDirection(state));
+                    // Remove block entities to prevent item drops in onStateReplaced
+                    world.removeBlockEntity(pos);
+                    world.removeBlockEntity(otherPos);
+                    // Set both to air
+                    world.setBlockState(pos, net.minecraft.block.Blocks.AIR.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
+                    world.setBlockState(otherPos, net.minecraft.block.Blocks.AIR.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
+                }
+
+                // Give item back to the owner
+                if (!owner.getInventory().insertStack(stack)) {
+                    owner.dropItem(stack, false);
+                }
+
+                // Clear the active bed location on the owner
+                PlayerBedTracker tracker = (PlayerBedTracker) owner;
+                tracker.save_bed$setActiveBedPos(null);
+                tracker.save_bed$setActiveBedWorld(null);
+            }
         }
     }
 

@@ -32,6 +32,15 @@ public class EnchantedBedBlock extends BedBlock {
 
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        if (!world.isClient() && hand == Hand.MAIN_HAND && player instanceof ServerPlayerEntity) {
+            BlockEntity be = world.getBlockEntity(pos);
+            if (be instanceof EnchantedBedBlockEntity) {
+                EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
+                if (player.getUuid().equals(bedBe.getOwnerUuid())) {
+                    com.save_bed.logic.BedLogic.openTakeUI((ServerPlayerEntity) player);
+                }
+            }
+        }
         return ActionResult.SUCCESS;
     }
 

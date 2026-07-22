@@ -14,6 +14,7 @@ import java.util.UUID;
 public class EnchantedBedBlockEntity extends BedBlockEntity {
     private UUID ownerUuid;
     private String ownerName;
+    private int baseLifes = 3;
 
     public EnchantedBedBlockEntity(BlockPos pos, BlockState state) {
         super(pos, state);
@@ -42,6 +43,15 @@ public class EnchantedBedBlockEntity extends BedBlockEntity {
         this.markDirty();
     }
 
+    public int getBaseLifes() {
+        return this.baseLifes;
+    }
+
+    public void setBaseLifes(int lifes) {
+        this.baseLifes = lifes;
+        this.markDirty();
+    }
+
     @Override
     public void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
@@ -51,6 +61,7 @@ public class EnchantedBedBlockEntity extends BedBlockEntity {
         if (this.ownerName != null) {
             nbt.putString("OwnerName", this.ownerName);
         }
+        nbt.putInt("BaseLifes", this.baseLifes);
     }
 
     @Override
@@ -61,6 +72,11 @@ public class EnchantedBedBlockEntity extends BedBlockEntity {
         }
         if (nbt.contains("OwnerName")) {
             this.ownerName = nbt.getString("OwnerName");
+        }
+        if (nbt.contains("BaseLifes")) {
+            this.baseLifes = nbt.getInt("BaseLifes");
+        } else {
+            this.baseLifes = 3;
         }
     }
 
