@@ -24,6 +24,12 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	runs {
+		client {
+			programArgs "--username", "MajorFp4"
+		}
+	}
 }
 
 dependencies {

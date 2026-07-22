@@ -31,12 +31,17 @@ public class EnchantedBedBlock extends BedBlock {
     }
 
     @Override
+    public java.util.List<ItemStack> getDroppedStacks(BlockState state, net.minecraft.loot.context.LootContextParameterSet.Builder builder) {
+        return java.util.Collections.emptyList();
+    }
+
+    @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (!world.isClient() && hand == Hand.MAIN_HAND && player instanceof ServerPlayerEntity) {
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof EnchantedBedBlockEntity) {
                 EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
-                if (player.getUuid().equals(bedBe.getOwnerUuid())) {
+                if (bedBe.isOwner(player)) {
                     com.save_bed.logic.BedLogic.openTakeUI((ServerPlayerEntity) player);
                 }
             }
@@ -57,7 +62,7 @@ public class EnchantedBedBlock extends BedBlock {
         BlockEntity be = world.getBlockEntity(pos);
         if (be instanceof EnchantedBedBlockEntity) {
             EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
-            if (player.getUuid().equals(bedBe.getOwnerUuid())) {
+            if (bedBe.isOwner(player)) {
                 return 0.0f; // Unbreakable for owner
             }
         }
@@ -66,21 +71,6 @@ public class EnchantedBedBlock extends BedBlock {
 
     @Override
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.isOf(newState.getBlock())) {
-            if (!world.isClient() && state.get(BedBlock.PART) == net.minecraft.block.enums.BedPart.HEAD) {
-                BlockEntity be = world.getBlockEntity(pos);
-                if (be instanceof EnchantedBedBlockEntity) {
-                    EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
-                    ItemStack stack = new ItemStack(SaveBed.ENCHANTED_BED);
-                    if (bedBe.getOwnerUuid() != null) {
-                        NbtCompound nbt = stack.getOrCreateNbt();
-                        nbt.putUuid("OwnerUUID", bedBe.getOwnerUuid());
-                        nbt.putString("OwnerName", bedBe.getOwnerName());
-                    }
-                    Block.dropStack(world, pos, stack);
-                }
-            }
-        }
         super.onStateReplaced(state, world, pos, newState, moved);
     }
 }

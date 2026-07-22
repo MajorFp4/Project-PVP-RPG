@@ -52,6 +52,19 @@ public class EnchantedBedBlockEntity extends BedBlockEntity {
         this.markDirty();
     }
 
+    public boolean isOwner(net.minecraft.entity.player.PlayerEntity player) {
+        if (player == null) {
+            return false;
+        }
+        if (this.ownerUuid != null && player.getUuid().equals(this.ownerUuid)) {
+            return true;
+        }
+        if (this.ownerName != null && player.getName().getString().equals(this.ownerName)) {
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);

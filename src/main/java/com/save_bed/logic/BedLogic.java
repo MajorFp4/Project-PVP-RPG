@@ -58,7 +58,7 @@ public class BedLogic {
         PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
             if (blockEntity instanceof EnchantedBedBlockEntity) {
                 EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) blockEntity;
-                if (player.getUuid().equals(bedBe.getOwnerUuid())) {
+                if (bedBe.isOwner(player)) {
                     return false; // Prevent owner from breaking their own bed
                 } else {
                     if (!world.isClient() && player instanceof ServerPlayerEntity) {
@@ -148,7 +148,7 @@ public class BedLogic {
                     BlockEntity be = world.getBlockEntity(pos);
                     if (be instanceof EnchantedBedBlockEntity) {
                         EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
-                        if (player.getUuid().equals(bedBe.getOwnerUuid())) {
+                        if (bedBe.isOwner(player)) {
                             bedValid = true;
                         }
                     }
@@ -184,17 +184,21 @@ public class BedLogic {
                     BlockPos otherPos = pos.offset(BedBlock.getOppositePartDirection(state));
 
                     // Clear the active bed location on the owner player if online
-                    UUID ownerUuid = bedBe.getOwnerUuid();
-                    if (ownerUuid != null) {
-                        ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ownerUuid);
-                        if (owner != null) {
+                    ServerPlayerEntity owner = null;
+                    if (world.getServer() != null) {
+                        for (ServerPlayerEntity onlinePlayer : world.getServer().getPlayerManager().getPlayerList()) {
+                            if (bedBe.isOwner(onlinePlayer)) {
+                                owner = onlinePlayer;
+                                break;
+                            }
+                        }
+                    }
+                    if (owner != null) {
                             PlayerBedTracker tracker = (PlayerBedTracker) owner;
                             tracker.save_bed$setActiveBedPos(null);
                             tracker.save_bed$setActiveBedWorld(null);
                             owner.sendMessage(Text.literal("Your Enchanted Bed was destroyed!").formatted(Formatting.RED));
                         }
-                    }
-
                     // Remove block entities to prevent item drops in onStateReplaced
                     world.removeBlockEntity(pos);
                     world.removeBlockEntity(otherPos);
@@ -241,11 +245,15 @@ public class BedLogic {
         BlockEntity be = world.getBlockEntity(pos);
         if (be instanceof EnchantedBedBlockEntity) {
             EnchantedBedBlockEntity bedBe = (EnchantedBedBlockEntity) be;
-            if (owner.getUuid().equals(bedBe.getOwnerUuid())) {
+            if (bedBe.isOwner(owner)) {
                 ItemStack stack = new ItemStack(SaveBed.ENCHANTED_BED);
                 NbtCompound nbt = stack.getOrCreateNbt();
-                nbt.putUuid("OwnerUUID", bedBe.getOwnerUuid());
-                nbt.putString("OwnerName", bedBe.getOwnerName());
+                if (bedBe.getOwnerUuid() != null) {
+                    nbt.putUuid("OwnerUUID", bedBe.getOwnerUuid());
+                }
+                if (bedBe.getOwnerName() != null) {
+                    nbt.putString("OwnerName", bedBe.getOwnerName());
+                }
 
                 BlockState state = world.getBlockState(pos);
                 if (state.getBlock() instanceof EnchantedBedBlock) {
@@ -258,10 +266,8 @@ public class BedLogic {
                     world.setBlockState(otherPos, net.minecraft.block.Blocks.AIR.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
                 }
 
-                // Give item back to the owner
-                if (!owner.getInventory().insertStack(stack)) {
-                    owner.dropItem(stack, false);
-                }
+                // Give item back to the owner directly
+                owner.getInventory().insertStack(stack);
 
                 // Clear the active bed location on the owner
                 PlayerBedTracker tracker = (PlayerBedTracker) owner;
